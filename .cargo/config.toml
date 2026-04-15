@@ -1,0 +1,3 @@
+# cargo lambda build --arm64 manages the cross-compilation target automatically.
+# Do NOT set a default [build] target here — it breaks local `cargo test` and
+# `cargo check` on macOS by forcing aarch64-linux cross-compilation.
