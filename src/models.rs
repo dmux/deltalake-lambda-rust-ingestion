@@ -44,6 +44,10 @@ pub struct CreateTablePayload {
     pub schema: Vec<SchemaFieldDef>,
     #[serde(default)]
     pub partition_columns: Vec<String>,
+    /// When true, all existing S3 objects under the table prefix are deleted
+    /// before creating the table — equivalent to DROP + CREATE.
+    #[serde(default)]
+    pub overwrite: bool,
 }
 
 #[derive(Debug, Deserialize)]

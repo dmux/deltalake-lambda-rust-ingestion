@@ -3,12 +3,12 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::domain::commands::{
-    CreateTableCommand, GetSchemaCommand, InsertCommand, OptimizeCommand, TableHistoryCommand,
-    TimeTravelCommand, UpsertCommand, VacuumCommand,
+    CreateTableCommand, DeleteTableCommand, GetSchemaCommand, InsertCommand, OptimizeCommand,
+    TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
 };
 use crate::domain::ports::TableRepository;
 use crate::domain::results::{
-    CreateTableResult, HistoryResult, InsertResult, OptimizeResult, SchemaResult,
+    CreateTableResult, DeleteTableResult, HistoryResult, InsertResult, OptimizeResult, SchemaResult,
     TimeTravelResult, UpsertResult, VacuumResult,
 };
 use crate::error::AppError;
@@ -117,5 +117,13 @@ impl IngestionService {
     pub async fn get_schema(&self, cmd: GetSchemaCommand) -> Result<SchemaResult, AppError> {
         info!(table_uri = %cmd.table_uri, "get_schema");
         self.repo.get_schema(cmd).await
+    }
+
+    pub async fn delete_table(
+        &self,
+        cmd: DeleteTableCommand,
+    ) -> Result<DeleteTableResult, AppError> {
+        info!(table_uri = %cmd.table_uri, "delete_table");
+        self.repo.delete_table(cmd).await
     }
 }

@@ -6,8 +6,8 @@ use tracing::{error, info, instrument};
 
 use crate::application::ingestion_service::IngestionService;
 use crate::domain::commands::{
-    CreateTableCommand, FieldDef, GetSchemaCommand, InsertCommand, OptimizeCommand,
-    TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
+    CreateTableCommand, DeleteTableCommand, FieldDef, GetSchemaCommand, InsertCommand,
+    OptimizeCommand, TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
 };
 use crate::error::AppError;
 use crate::models::{
@@ -75,6 +75,7 @@ async fn dispatch(
                     })
                     .collect(),
                 partition_columns: p.partition_columns,
+                overwrite: p.overwrite,
             };
             let r = service.create_table(cmd).await?;
             Ok(json!({ "version": r.version, "message": r.message }))
@@ -194,6 +195,17 @@ async fn dispatch(
                         "nullable": f.nullable,
                     })).collect::<Vec<_>>()
                 }
+            }))
+        }
+
+        "delete_table" => {
+            let cmd = DeleteTableCommand {
+                table_uri: uri.to_string(),
+            };
+            let r = service.delete_table(cmd).await?;
+            Ok(json!({
+                "table_uri": r.table_uri,
+                "objects_deleted": r.objects_deleted,
             }))
         }
 

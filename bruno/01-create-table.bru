@@ -29,7 +29,8 @@ body:json {
         {"name": "created_at", "data_type": "timestamp", "nullable": true},
         {"name": "date_key",  "data_type": "integer",   "nullable": false}
       ],
-      "partition_columns": ["date_key", "event_type"]
+      "partition_columns": ["date_key", "event_type"],
+      "overwrite": false
     }
   }
 }

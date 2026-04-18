@@ -18,6 +18,8 @@ pub struct CreateTableCommand {
     pub table_uri: String,
     pub schema: Vec<FieldDef>,
     pub partition_columns: Vec<String>,
+    /// Drop all existing S3 objects before creating.
+    pub overwrite: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -68,5 +70,10 @@ pub struct TableHistoryCommand {
 
 #[derive(Debug, Clone)]
 pub struct GetSchemaCommand {
+    pub table_uri: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DeleteTableCommand {
     pub table_uri: String,
 }

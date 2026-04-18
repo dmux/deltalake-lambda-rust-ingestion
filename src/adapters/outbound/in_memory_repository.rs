@@ -4,13 +4,13 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 
 use crate::domain::commands::{
-    CreateTableCommand, FieldDef, GetSchemaCommand, InsertCommand, OptimizeCommand, Record,
-    TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
+    CreateTableCommand, DeleteTableCommand, FieldDef, GetSchemaCommand, InsertCommand,
+    OptimizeCommand, Record, TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
 };
 use crate::domain::ports::TableRepository;
 use crate::domain::results::{
-    CommitEntry, CreateTableResult, HistoryResult, InsertResult, OptimizeResult, SchemaField,
-    SchemaResult, TimeTravelResult, UpsertResult, VacuumResult,
+    CommitEntry, CreateTableResult, DeleteTableResult, HistoryResult, InsertResult, OptimizeResult,
+    SchemaField, SchemaResult, TimeTravelResult, UpsertResult, VacuumResult,
 };
 use crate::error::AppError;
 
@@ -362,6 +362,19 @@ impl TableRepository for InMemoryTableRepository {
             version: state.version,
             num_files: state.num_files,
             fields: state.schema_fields(),
+        })
+    }
+
+    async fn delete_table(&self, cmd: DeleteTableCommand) -> Result<DeleteTableResult, AppError> {
+        let mut tables = self.tables.lock().unwrap();
+        if tables.remove(&cmd.table_uri).is_none() {
+            return Err(AppError::Delta(deltalake::DeltaTableError::NotATable(
+                cmd.table_uri.clone(),
+            )));
+        }
+        Ok(DeleteTableResult {
+            table_uri: cmd.table_uri,
+            objects_deleted: 0, // in-memory: no actual objects
         })
     }
 }

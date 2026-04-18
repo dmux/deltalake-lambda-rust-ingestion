@@ -1,3 +1,9 @@
+#[derive(Debug, Clone)]
+pub struct DeleteTableResult {
+    pub table_uri: String,
+    pub objects_deleted: usize,
+}
+
 /// A single column in a Delta table schema.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SchemaField {

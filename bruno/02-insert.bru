@@ -26,7 +26,8 @@ body:json {
         {"id": 1, "event_type": "click",    "value": 1.5,  "created_at": 1704067200000000, "date_key": 20240101},
         {"id": 2, "event_type": "view",     "value": 2.0,  "created_at": 1704067260000000, "date_key": 20240101},
         {"id": 3, "event_type": "click",    "value": 0.75, "created_at": 1704067320000000, "date_key": 20240101}
-      ]
+      ],
+      "partition_columns": ["date_key", "event_type"]
     }
   }
 }

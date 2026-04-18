@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 
 use crate::domain::commands::{
-    CreateTableCommand, GetSchemaCommand, InsertCommand, OptimizeCommand, TableHistoryCommand,
-    TimeTravelCommand, UpsertCommand, VacuumCommand,
+    CreateTableCommand, DeleteTableCommand, GetSchemaCommand, InsertCommand, OptimizeCommand,
+    TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
 };
 use crate::domain::results::{
-    CreateTableResult, HistoryResult, InsertResult, OptimizeResult, SchemaResult,
+    CreateTableResult, DeleteTableResult, HistoryResult, InsertResult, OptimizeResult, SchemaResult,
     TimeTravelResult, UpsertResult, VacuumResult,
 };
 use crate::error::AppError;
@@ -24,4 +24,5 @@ pub trait TableRepository: Send + Sync {
     async fn time_travel(&self, cmd: TimeTravelCommand) -> Result<TimeTravelResult, AppError>;
     async fn table_history(&self, cmd: TableHistoryCommand) -> Result<HistoryResult, AppError>;
     async fn get_schema(&self, cmd: GetSchemaCommand) -> Result<SchemaResult, AppError>;
+    async fn delete_table(&self, cmd: DeleteTableCommand) -> Result<DeleteTableResult, AppError>;
 }

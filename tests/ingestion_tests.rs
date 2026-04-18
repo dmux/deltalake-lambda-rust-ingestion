@@ -50,6 +50,7 @@ async fn test_create_table_success() {
             table_uri: URI.into(),
             schema: basic_schema(),
             partition_columns: vec!["event_type".into()],
+            overwrite: false,
         })
         .await
         .unwrap();
@@ -65,6 +66,7 @@ async fn test_create_table_idempotent() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     };
 
     svc.create_table(cmd()).await.unwrap();
@@ -82,6 +84,7 @@ async fn test_create_table_empty_schema_rejected() {
             table_uri: URI.into(),
             schema: vec![],
             partition_columns: vec![],
+            overwrite: false,
         })
         .await
         .unwrap_err();
@@ -98,6 +101,7 @@ async fn test_insert_appends_records_and_bumps_version() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -134,6 +138,7 @@ async fn test_insert_empty_records_is_noop() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -165,6 +170,7 @@ async fn test_upsert_updates_existing_and_inserts_new() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -205,6 +211,7 @@ async fn test_upsert_empty_predicate_rejected() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -229,6 +236,7 @@ async fn test_upsert_empty_records_is_noop() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -256,6 +264,7 @@ async fn test_get_schema_returns_declared_fields() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -295,6 +304,7 @@ async fn test_history_grows_with_each_operation() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -339,6 +349,7 @@ async fn test_history_limit_is_respected() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -373,6 +384,7 @@ async fn test_time_travel_by_version() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -406,6 +418,7 @@ async fn test_time_travel_by_timestamp() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -430,6 +443,7 @@ async fn test_time_travel_requires_version_or_timestamp() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -453,6 +467,7 @@ async fn test_time_travel_to_unknown_version_returns_error() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -478,6 +493,7 @@ async fn test_vacuum_dry_run_lists_files_without_deleting() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -514,6 +530,7 @@ async fn test_vacuum_real_run_cleans_files() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -552,6 +569,7 @@ async fn test_optimize_compacts_files() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec![],
+            overwrite: false,
     })
     .await
     .unwrap();
@@ -605,6 +623,7 @@ async fn test_full_lifecycle() {
         table_uri: URI.into(),
         schema: basic_schema(),
         partition_columns: vec!["event_type".into()],
+        overwrite: false,
     })
     .await
     .unwrap();

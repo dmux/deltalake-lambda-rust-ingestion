@@ -4,7 +4,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use deltalake::arrow::array::{
-    Array, BooleanArray, Float64Array, Int32Array, Int64Array, StringArray,
+    Array, BooleanArray, Date32Array, Float64Array, Int32Array, Int64Array, StringArray,
+    TimestampMicrosecondArray,
 };
 use deltalake::arrow::datatypes::{DataType as ArrowDataType, Field, Schema as ArrowSchema};
 use deltalake::arrow::record_batch::RecordBatch;
@@ -15,13 +16,13 @@ use deltalake::protocol::SaveMode;
 use deltalake::{open_table_with_storage_options, DeltaOps, DeltaTableBuilder};
 
 use crate::domain::commands::{
-    CreateTableCommand, GetSchemaCommand, InsertCommand, OptimizeCommand, Record,
-    TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
+    CreateTableCommand, DeleteTableCommand, GetSchemaCommand, InsertCommand, OptimizeCommand,
+    Record, TableHistoryCommand, TimeTravelCommand, UpsertCommand, VacuumCommand,
 };
 use crate::domain::ports::TableRepository;
 use crate::domain::results::{
-    CommitEntry, CreateTableResult, HistoryResult, InsertResult, OptimizeResult, SchemaField,
-    SchemaResult, TimeTravelResult, UpsertResult, VacuumResult,
+    CommitEntry, CreateTableResult, DeleteTableResult, HistoryResult, InsertResult, OptimizeResult,
+    SchemaField, SchemaResult, TimeTravelResult, UpsertResult, VacuumResult,
 };
 use crate::error::AppError;
 
@@ -59,7 +60,13 @@ fn delta_primitive_to_arrow(p: &PrimitiveType) -> Result<ArrowDataType, AppError
         PrimitiveType::Double => ArrowDataType::Float64,
         PrimitiveType::Boolean => ArrowDataType::Boolean,
         PrimitiveType::Date => ArrowDataType::Date32,
-        PrimitiveType::Timestamp | PrimitiveType::TimestampNtz => {
+        PrimitiveType::Timestamp => {
+            ArrowDataType::Timestamp(
+                deltalake::arrow::datatypes::TimeUnit::Microsecond,
+                Some("UTC".into()),
+            )
+        }
+        PrimitiveType::TimestampNtz => {
             ArrowDataType::Timestamp(deltalake::arrow::datatypes::TimeUnit::Microsecond, None)
         }
         PrimitiveType::Binary => ArrowDataType::Binary,
@@ -153,12 +160,28 @@ fn build_array(
                     .collect();
                 Ok(Arc::new(BooleanArray::from(vals)))
             }
-            PrimitiveType::Timestamp | PrimitiveType::TimestampNtz | PrimitiveType::Date => {
+            PrimitiveType::Timestamp => {
                 let vals: Vec<Option<i64>> = records
                     .iter()
                     .map(|r| r.get(col).and_then(|v| v.as_i64()))
                     .collect();
-                Ok(Arc::new(Int64Array::from(vals)))
+                Ok(Arc::new(
+                    TimestampMicrosecondArray::from(vals).with_timezone("UTC"),
+                ))
+            }
+            PrimitiveType::TimestampNtz => {
+                let vals: Vec<Option<i64>> = records
+                    .iter()
+                    .map(|r| r.get(col).and_then(|v| v.as_i64()))
+                    .collect();
+                Ok(Arc::new(TimestampMicrosecondArray::from(vals)))
+            }
+            PrimitiveType::Date => {
+                let vals: Vec<Option<i32>> = records
+                    .iter()
+                    .map(|r| r.get(col).and_then(|v| v.as_i64()).map(|n| n as i32))
+                    .collect();
+                Ok(Arc::new(Date32Array::from(vals)))
             }
             other => Err(AppError::Schema(format!(
                 "Unsupported primitive type '{other:?}' for column '{col}'"
@@ -174,6 +197,78 @@ fn build_array(
 
 /// Outbound adapter — implements `TableRepository` using delta-rs + Amazon S3.
 pub struct DeltaTableRepository;
+
+/// Delete every S3 object under the given `s3://bucket/prefix` URI.
+/// Returns the number of objects deleted.
+async fn delete_s3_prefix(table_uri: &str) -> Result<usize, AppError> {
+    let stripped = table_uri
+        .strip_prefix("s3://")
+        .ok_or_else(|| AppError::Schema(format!("Invalid S3 URI: {table_uri}")))?;
+    let (bucket, prefix_raw) = stripped
+        .split_once('/')
+        .ok_or_else(|| AppError::Schema(format!("Invalid S3 URI: {table_uri}")))?;
+    let prefix = if prefix_raw.ends_with('/') {
+        prefix_raw.to_string()
+    } else {
+        format!("{prefix_raw}/")
+    };
+
+    let config = aws_config::load_from_env().await;
+    let s3_conf = aws_sdk_s3::config::Builder::from(&config)
+        .force_path_style(true)
+        .build();
+    let client = aws_sdk_s3::Client::from_conf(s3_conf);
+
+    let mut objects_deleted = 0usize;
+    let mut continuation_token: Option<String> = None;
+
+    loop {
+        let mut list_req = client.list_objects_v2().bucket(bucket).prefix(&prefix);
+        if let Some(token) = continuation_token {
+            list_req = list_req.continuation_token(token);
+        }
+        let resp = list_req
+            .send()
+            .await
+            .map_err(|e| AppError::Schema(e.to_string()))?;
+
+        let identifiers: Vec<aws_sdk_s3::types::ObjectIdentifier> = resp
+            .contents()
+            .iter()
+            .filter_map(|obj| {
+                let key = obj.key()?;
+                aws_sdk_s3::types::ObjectIdentifier::builder()
+                    .key(key)
+                    .build()
+                    .ok()
+            })
+            .collect();
+
+        if !identifiers.is_empty() {
+            let count = identifiers.len();
+            let delete = aws_sdk_s3::types::Delete::builder()
+                .set_objects(Some(identifiers))
+                .build()
+                .map_err(|e| AppError::Schema(e.to_string()))?;
+            client
+                .delete_objects()
+                .bucket(bucket)
+                .delete(delete)
+                .send()
+                .await
+                .map_err(|e| AppError::Schema(e.to_string()))?;
+            objects_deleted += count;
+        }
+
+        if resp.is_truncated().unwrap_or(false) {
+            continuation_token = resp.next_continuation_token().map(|s| s.to_string());
+        } else {
+            break;
+        }
+    }
+
+    Ok(objects_deleted)
+}
 
 #[async_trait]
 impl TableRepository for DeltaTableRepository {
@@ -191,6 +286,10 @@ impl TableRepository for DeltaTableRepository {
             })
             .collect::<Result<_, AppError>>()?;
 
+        if cmd.overwrite {
+            delete_s3_prefix(&cmd.table_uri).await?;
+        }
+
         let table = DeltaOps::try_from_uri_with_storage_options(
             &cmd.table_uri,
             s3_storage_options(),
@@ -199,12 +298,21 @@ impl TableRepository for DeltaTableRepository {
         .create()
         .with_columns(columns)
         .with_partition_columns(cmd.partition_columns)
-        .with_save_mode(SaveMode::Ignore)
+        .with_save_mode(if cmd.overwrite {
+            SaveMode::ErrorIfExists
+        } else {
+            SaveMode::Ignore
+        })
         .await?;
 
         Ok(CreateTableResult {
             version: table.version(),
-            message: "Table created (or already existed)".into(),
+            message: if cmd.overwrite {
+                "Table recreated"
+            } else {
+                "Table created (or already existed)"
+            }
+            .into(),
         })
     }
 
@@ -385,6 +493,14 @@ impl TableRepository for DeltaTableRepository {
             version: table.version(),
             num_files: table.get_files_count(),
             fields: delta_schema_to_results(&schema),
+        })
+    }
+
+    async fn delete_table(&self, cmd: DeleteTableCommand) -> Result<DeleteTableResult, AppError> {
+        let objects_deleted = delete_s3_prefix(&cmd.table_uri).await?;
+        Ok(DeleteTableResult {
+            table_uri: cmd.table_uri,
+            objects_deleted,
         })
     }
 }

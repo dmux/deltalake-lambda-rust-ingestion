@@ -1,7 +1,7 @@
 meta {
-  name: 07 - Optimize (Z-Order)
+  name: 09 - Delete Table
   type: http
-  seq: 7
+  seq: 9
 }
 
 post {
@@ -19,10 +19,8 @@ headers {
 
 body:json {
   {
-    "operation": "optimize",
+    "operation": "delete_table",
     "table_uri": "{{tableUri}}",
-    "payload": {
-      "zorder_columns": ["id"]
-    }
+    "payload": {}
   }
 }

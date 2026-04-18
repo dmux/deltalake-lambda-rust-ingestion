@@ -30,7 +30,7 @@ LOCAL_IMAGE_URI   = $(ECR_REGISTRY)/$(FUNCTION_NAME):$(IMAGE_TAG)
         local-logs local-list local-browse-s3 \
         local-invoke-create local-invoke-insert local-invoke-upsert \
         local-invoke-schema local-invoke-history local-invoke-vacuum \
-        local-invoke-optimize local-invoke-time-travel
+        local-invoke-optimize local-invoke-time-travel local-invoke-delete
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -282,4 +282,12 @@ local-invoke-time-travel:
 		--function-name $(FUNCTION_NAME) \
 		--cli-binary-format raw-in-base64-out \
 		--payload '{"operation":"time_travel","table_uri":"$(LOCAL_TABLE_URI)","payload":{"version":0}}' \
+		/dev/stdout
+
+## Delete all objects in the Delta table prefix on S3
+local-invoke-delete:
+	$(AWS_LOCAL) lambda invoke \
+		--function-name $(FUNCTION_NAME) \
+		--cli-binary-format raw-in-base64-out \
+		--payload '{"operation":"delete_table","table_uri":"$(LOCAL_TABLE_URI)","payload":{}}' \
 		/dev/stdout
