@@ -1,0 +1,32 @@
+name: deltalake-ingestion
+
+services:
+  ministack:
+    image: ministackorg/ministack:latest
+    container_name: ministack
+    ports:
+      - "4566:4566"
+    environment:
+      - PERSIST_STATE=1
+      - S3_PERSIST=1
+      - LOG_LEVEL=INFO
+      # docker executor runs Lambda as a container using the image we push to MiniStack ECR
+      - LAMBDA_EXECUTOR=docker
+      # must match the Compose project network so the Lambda container can reach MiniStack S3
+      - LAMBDA_DOCKER_NETWORK=deltalake-ingestion_default
+    volumes:
+      - ./data/state:/tmp/ministack-state
+      - ./data/s3:/tmp/ministack-data/s3
+      # Lambda containers are started by the host Docker daemon via this socket
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request;
+          urllib.request.urlopen('http://localhost:4566/_ministack/health')"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s

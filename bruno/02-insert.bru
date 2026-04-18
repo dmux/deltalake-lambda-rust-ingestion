@@ -1,0 +1,32 @@
+meta {
+  name: 02 - Insert Records
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/2015-03-31/functions/{{functionName}}/invocations
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Amz-Invocation-Type: RequestResponse
+  X-Amz-Date: 20260101T000000Z
+  Authorization: AWS4-HMAC-SHA256 Credential=test/20260101/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=test
+}
+
+body:json {
+  {
+    "operation": "insert",
+    "table_uri": "{{tableUri}}",
+    "payload": {
+      "records": [
+        {"id": 1, "event_type": "click",    "value": 1.5,  "created_at": 1704067200000000},
+        {"id": 2, "event_type": "view",     "value": 2.0,  "created_at": 1704067260000000},
+        {"id": 3, "event_type": "click",    "value": 0.75, "created_at": 1704067320000000}
+      ]
+    }
+  }
+}

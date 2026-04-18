@@ -1,4 +1,5 @@
 /target
 /target/lambda
+/data/s3/*
 Cargo.lock
 .env

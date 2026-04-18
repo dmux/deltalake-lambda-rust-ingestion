@@ -1,0 +1,26 @@
+meta {
+  name: 04 - Get Schema
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/2015-03-31/functions/{{functionName}}/invocations
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Amz-Invocation-Type: RequestResponse
+  X-Amz-Date: 20260101T000000Z
+  Authorization: AWS4-HMAC-SHA256 Credential=test/20260101/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=test
+}
+
+body:json {
+  {
+    "operation": "get_schema",
+    "table_uri": "{{tableUri}}",
+    "payload": {}
+  }
+}

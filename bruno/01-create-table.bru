@@ -1,0 +1,34 @@
+meta {
+  name: 01 - Create Table
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/2015-03-31/functions/{{functionName}}/invocations
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Amz-Invocation-Type: RequestResponse
+  X-Amz-Date: 20260101T000000Z
+  Authorization: AWS4-HMAC-SHA256 Credential=test/20260101/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=test
+}
+
+body:json {
+  {
+    "operation": "create_table",
+    "table_uri": "{{tableUri}}",
+    "payload": {
+      "schema": [
+        {"name": "id",         "data_type": "long",      "nullable": false},
+        {"name": "event_type", "data_type": "string",    "nullable": true},
+        {"name": "value",      "data_type": "double",    "nullable": true},
+        {"name": "created_at", "data_type": "timestamp", "nullable": true}
+      ],
+      "partition_columns": ["event_type"]
+    }
+  }
+}

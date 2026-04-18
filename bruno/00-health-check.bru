@@ -1,0 +1,11 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 0
+}
+
+get {
+  url: {{baseUrl}}/_ministack/health
+  body: none
+  auth: none
+}

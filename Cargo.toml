@@ -47,3 +47,6 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Force OpenSSL to compile from source for cross-compilation (native-tls pulled by reqwest/delta_kernel)
+openssl = { version = "0.10", features = ["vendored"] }
