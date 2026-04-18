@@ -26,9 +26,10 @@ body:json {
         {"name": "id",         "data_type": "long",      "nullable": false},
         {"name": "event_type", "data_type": "string",    "nullable": true},
         {"name": "value",      "data_type": "double",    "nullable": true},
-        {"name": "created_at", "data_type": "timestamp", "nullable": true}
+        {"name": "created_at", "data_type": "timestamp", "nullable": true},
+        {"name": "date_key",  "data_type": "integer",   "nullable": false}
       ],
-      "partition_columns": ["event_type"]
+      "partition_columns": ["date_key", "event_type"]
     }
   }
 }
