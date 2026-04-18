@@ -27,7 +27,7 @@ LOCAL_IMAGE_URI   = $(ECR_REGISTRY)/$(FUNCTION_NAME):$(IMAGE_TAG)
         invoke-history invoke-upsert invoke-vacuum invoke-optimize \
         invoke-time-travel fmt lint test clean check \
         local-start local-stop local-setup local-deploy local-image-deploy local-status \
-        local-logs local-list local-browse-s3 \
+        local-logs local-logs-last local-list local-browse-s3 \
         local-invoke-create local-invoke-insert local-invoke-upsert \
         local-invoke-schema local-invoke-history local-invoke-vacuum \
         local-invoke-optimize local-invoke-time-travel local-invoke-delete
@@ -214,9 +214,18 @@ local-list:
 local-browse-s3:
 	$(AWS_LOCAL) s3 ls s3://$(S3_BUCKET)/$(TABLE_PATH)/ --recursive
 
-## Tail CloudWatch logs for the deployed function (Ctrl-C to stop)
+## Tail MiniStack container logs (MiniStack does not forward Lambda output to CloudWatch)
 local-logs:
-	$(AWS_LOCAL) logs tail /aws/lambda/$(FUNCTION_NAME) --follow
+	docker logs -f ministack
+
+## Decode the LogResult from a Lambda invocation and print it (reads current schema as probe)
+local-logs-last:
+	@$(AWS_LOCAL) lambda invoke \
+		--function-name $(FUNCTION_NAME) \
+		--cli-binary-format raw-in-base64-out \
+		--payload '{"operation":"get_schema","table_uri":"$(LOCAL_TABLE_URI)","payload":{}}' \
+		/dev/null \
+	| python3 -c "import sys,json,base64; d=json.load(sys.stdin); print(base64.b64decode(d.get('LogResult','')).decode('utf-8','replace'))"
 
 # ── Local invocations (aws lambda invoke → MiniStack) ─────────────────────────
 
@@ -233,7 +242,7 @@ local-invoke-insert:
 	$(AWS_LOCAL) lambda invoke \
 		--function-name $(FUNCTION_NAME) \
 		--cli-binary-format raw-in-base64-out \
-		--payload '{"operation":"insert","table_uri":"$(LOCAL_TABLE_URI)","payload":{"records":[{"id":1,"event_type":"click","value":1.5,"created_at":1704067200000000},{"id":2,"event_type":"view","value":2.0,"created_at":1704067260000000},{"id":3,"event_type":"click","value":0.75,"created_at":1704067320000000}]}}' \
+		--payload '{"operation":"insert","table_uri":"$(LOCAL_TABLE_URI)","payload":{"records":[{"id":1,"event_type":"click","value":1.5,"created_at":1704067200000000},{"id":2,"event_type":"view","value":2.0,"created_at":1704067260000000},{"id":3,"event_type":"click","value":0.75,"created_at":1704067320000000}],"partition_columns":["event_type"]}}' \
 		/dev/stdout
 
 ## Upsert records (update id=1, insert id=4)
@@ -273,7 +282,7 @@ local-invoke-optimize:
 	$(AWS_LOCAL) lambda invoke \
 		--function-name $(FUNCTION_NAME) \
 		--cli-binary-format raw-in-base64-out \
-		--payload '{"operation":"optimize","table_uri":"$(LOCAL_TABLE_URI)","payload":{"zorder_columns":["event_type"]}}' \
+		--payload '{"operation":"optimize","table_uri":"$(LOCAL_TABLE_URI)","payload":{"zorder_columns":["id"]}}' \
 		/dev/stdout
 
 ## Time travel: read table at version 0
