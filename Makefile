@@ -26,11 +26,26 @@ LOCAL_IMAGE_URI   = $(ECR_REGISTRY)/$(FUNCTION_NAME):$(IMAGE_TAG)
 .PHONY: build release local-release deploy invoke-create invoke-insert invoke-schema \
         invoke-history invoke-upsert invoke-vacuum invoke-optimize \
         invoke-time-travel fmt lint test clean check \
-        local-start local-stop local-setup local-deploy local-image-deploy local-status \
-        local-logs local-logs-last local-list local-browse-s3 \
+        dev local-start local-stop local-setup local-deploy local-image-deploy local-status \
+        local-logs local-logs-last local-list local-browse-s3 local-e2e \
         local-invoke-create local-invoke-insert local-invoke-upsert \
         local-invoke-schema local-invoke-history local-invoke-vacuum \
         local-invoke-optimize local-invoke-time-travel local-invoke-delete
+
+# ── Dev (one-command local setup) ────────────────────────────────────────────
+
+## Start MiniStack, create infra, build and deploy Lambda — full local dev env in one shot
+dev: local-setup local-deploy
+	@echo ""
+	@echo "Dev environment ready:"
+	@echo "  Function : $(FUNCTION_NAME)"
+	@echo "  S3 bucket: s3://$(S3_BUCKET)/$(TABLE_PATH)"
+	@echo "  Endpoint : $(LOCAL_ENDPOINT)"
+	@echo ""
+	@echo "Useful next steps:"
+	@echo "  make local-e2e          — run end-to-end tests"
+	@echo "  make local-logs         — tail MiniStack logs"
+	@echo "  make local-invoke-schema TABLE_PATH=tables/mytable"
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -292,6 +307,12 @@ local-invoke-time-travel:
 		--cli-binary-format raw-in-base64-out \
 		--payload '{"operation":"time_travel","table_uri":"$(LOCAL_TABLE_URI)","payload":{"version":0}}' \
 		/dev/stdout
+
+## Run end-to-end tests against MiniStack (requires: make dev)
+local-e2e:
+	@LOCAL_ENDPOINT=$(LOCAL_ENDPOINT) LOCAL_REGION=$(LOCAL_REGION) \
+	 FUNCTION_NAME=$(FUNCTION_NAME) S3_BUCKET=$(S3_BUCKET) \
+	 bash scripts/e2e_test.sh
 
 ## Delete all objects in the Delta table prefix on S3
 local-invoke-delete:
